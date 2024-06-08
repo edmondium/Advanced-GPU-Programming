@@ -1,0 +1,58 @@
+program signal
+use cudafor 
+use cufft                               !  cuFFT interface
+implicit none
+double precision, parameter            :: pi =  3.14159265359      
+double precision, allocatable,managed  :: S(:) ! signal
+double complex, allocatable,managed    :: ST(:) ! transformed signal
+double precision, allocatable          :: t(:) ! time array
+double precision, allocatable          :: f(:) ! frq array
+double precision                       :: TT ! Sampling period   
+integer                                :: Fs =1000 ! Sampling period
+integer                                :: L = 1500 !Length of signal
+double precision,allocatable           :: P(:)
+integer                                :: i, ierr, plan
+
+allocate(S(L),ST(L),t(L),f((L/2)+1),P(L))
+TT = 1.0/Fs
+do i=1, L
+   t(i) = dble(i-1)*TT    ! time array
+enddo
+do i=1, (L/2)+1
+   f(i) = Fs* dble(i-1)/L ! frq array
+enddo
+
+do i=1, L  
+   S(i) = 0.7*sin(2.0*pi*50.0*t(i)) + sin(2.0*pi*180.0*t(i)) ! signal construction 
+enddo
+
+
+! TODO: Create a plan for double to complex transformation
+ierr = cufftPlan1D()
+! TODO: Call cuFFT
+ierr = cufftExecD2Z()
+
+ierr = cudaDeviceSynchronize()
+
+! distroy the handle
+
+
+P(1:L/2+1) = 2*abs(St(1:L/2+1)/L) ! calculate amplitudes
+
+! write to files
+open(30,file="signal.dat")
+open(40,file="signalT.dat")
+ 
+do i=1,size(t)  
+   write(30,*),1000*t(i),S(i)
+enddo
+do i=1,size(f)  
+   write(40,*),f(i),P(i)
+enddo
+
+! Clean up
+deallocate(S,ST,t,f,P)
+close(30)
+close(40)
+
+end program signal

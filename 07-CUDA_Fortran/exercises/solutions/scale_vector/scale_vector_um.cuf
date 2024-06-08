@@ -1,0 +1,50 @@
+module mathOps 
+ contains
+
+ attributes(global) subroutine scale_vector(alpha, a, c)
+     implicit none
+
+     real,intent(in)       :: a(:)
+     real,intent(out)      :: c(:)
+
+     real,intent(in),value :: alpha  ! pass the scalar argument by value
+
+     integer               :: i, n
+
+     n = size(a) 
+     i = blockDim%x*(blockIdx%x-1) + threadIdx%x
+     if (i <= n) c(i) = a(i)*alpha
+    end subroutine scale_vector
+end module mathOps
+
+
+program main
+    use mathOps
+    use cudafor
+    implicit none
+
+    integer, parameter             :: N = 2048
+    integer                        :: blockDim, gridDim, err
+    real                           :: alpha = 2.0
+    real,managed,allocatable       :: a(:), c(:) ! Define Unified Memory arrays 
+
+    allocate(a(N), c(N)) ! Allocate  arrays
+
+
+    a=1.0
+
+
+
+    blockDim = 256
+
+
+    gridDim = ceiling(real(N)/blockDim)
+
+    call scale_vector<<<gridDim,blockDim>>>(alpha,a,c) !Call the kernel
+    err = cudaDeviceSynchronize() 
+
+
+
+    print*,"max_diff=", maxval(c-2.0) 
+
+end program main

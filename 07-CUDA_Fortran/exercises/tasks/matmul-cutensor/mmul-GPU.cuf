@@ -1,0 +1,56 @@
+program main
+    
+    use cudafor
+
+    !! TODO: include cutensor lib
+   implicit none
+   
+    CHARACTER(100) :: Arg1
+    real(8), allocatable         :: A(:,:),B(:,:),C(:,:)
+    !! TODO: declare device arrays
+
+    integer                      :: S,i
+    integer                      :: t1, t2, tt,err
+    real(8)                      :: tTime
+    integer*8                    :: flps
+
+
+    S=1024
+    IF(COMMAND_ARGUMENT_COUNT() == 1) THEN
+     CALL GET_COMMAND_ARGUMENT(1,Arg1)   !first, read in the two values
+     read(Arg1,*) S
+    endif
+    write(*,*)"Single GPU matmul"
+    write(*,*)""
+    write(*,fmt="('Matmul for : ',i0,' x ',i0,' matrices')") S,S
+    allocate(A(s,s),B(s,s),C(s,s))
+    
+    !! TODO: allocate device arrays
+    call random_number(A)
+    call random_number(B)
+   
+   !! TODO: copy A and B to device and initialize C_d to zero
+    
+
+    call system_clock(t1)
+    
+    !! TODO: use Matmul intrinsic fuction to do the matrix multiplication on GPU 
+
+
+    C=  Matmul(A,B)
+
+    call system_clock(t2, tt)
+    
+    !! TODO: Copy back the results to host
+
+    10 format (a,f12.5,a)
+    20 format (a,f12.5)
+    write(*,10) "Call to matmul took ",real(t2-t1)/tt," seconds"
+    write(*,20) "gflops = ",  2.0e-9 *dble(S**3)/ (real(t2-t1)/tt)
+
+
+    deallocate(A,B,C)
+    
+    !! TODO: deallocate device arrays
+
+end program main

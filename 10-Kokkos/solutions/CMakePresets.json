@@ -1,0 +1,20 @@
+{
+    "version": 4,
+    "cmakeMinimumRequired": {
+      "major": 3,
+      "minor": 25,
+      "patch": 2
+    },
+    "configurePresets" :
+  [
+    {
+      "name": "system",
+      "displayName": "System Configuration",
+      "cacheVariables" : {
+        "Kokkos_DIR" : "/p/project/training2418/kokkos/install/lib64/cmake/Kokkos",
+        "CMAKE_CXX_COMPILER" : "/p/project/training2418/kokkos/install/bin/nvcc_wrapper",
+        "CMAKE_CXX_EXTENSIONS": "OFF"
+      }
+    }
+]
+}  

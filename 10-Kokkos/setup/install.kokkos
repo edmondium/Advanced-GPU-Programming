@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+#-------------------------------------------------------------------------------
+# SPDX-License-Identifier: "Apache-2.0"
+# Copyright (C) 2020, Jayesh Badwaik <j.badwaik@fz-juelich.de>
+#-------------------------------------------------------------------------------
+set -euo pipefail
+
+SOURCE="${BASH_SOURCE[0]}"
+# resolve $SOURCE until the file is no longer a symlink
+while [ -h "$SOURCE" ]; do
+  DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  # if $SOURCE was a relative symlink, we need to resolve it relative to the
+  # path where the symlink file was located
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIRECTORY="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+
+print_help()
+{
+    printf "%6s\n" "usage: install.kokkos --prefix <location>"
+}
+
+
+if [[ $# -ne 1 && $# -ne 2 ]]; then
+  print_help
+  exit 1
+fi
+
+PREFIX_KEY=$1
+
+case $PREFIX_KEY in
+  -h|--help)
+    print_help
+    exit 0
+    ;;
+  -p|--prefix)
+    if [[ $# -ne 2 ]]; then
+        print_help
+        exit 1
+    fi
+    INSTALL_PREFIX=$2
+    ;;
+  *)
+    print_help
+    exit 1
+esac
+
+BUILD_SITE=$(mktemp -d -p /run/user/$(id -u))
+echo "Building in $BUILD_SITE"
+DOWNLOAD_URL="https://github.com/kokkos/kokkos/archive/refs/tags/4.3.01.tar.gz"
+
+pushd $BUILD_SITE
+  wget $DOWNLOAD_URL -O kokkos.tar.gz
+  mkdir kokkos
+  tar -xf kokkos.tar.gz -C kokkos --strip-components 1
+  module load  GCC CUDA hwloc CMake git
+  cmake -B build -S kokkos \
+    -DKokkos_ARCH_ZEN2=ON \
+    -DKokkos_ARCH_AMPERE80=ON \
+    -DKokkos_ENABLE_OPENMP=ON \
+    -DKokkos_ENABLE_CUDA=ON \
+    -DKokkos_ENABLE_SERIAL=ON \
+    -DKokkos_ENABLE_HWLOC=ON \
+    -DCMAKE_CXX_EXTENSIONS=OFF \
+    -DCMAKE_CXX_COMPILER=$(realpath kokkos/bin/nvcc_wrapper) \
+    -DCMAKE_CXX_FLAGS="-ccbin g++" \
+
+  cmake --build build --parallel 32
+  cmake --install build --prefix $INSTALL_PREFIX
+popd
+
+
+
+
+

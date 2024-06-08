@@ -1,0 +1,98 @@
+program dgemm_um
+   use cudafor
+   use curand
+   use cublas
+   implicit none
+
+   integer, parameter :: double = selected_real_kind(15,300)
+   integer :: width = 100
+   integer :: i, isize, istat, t1, t2, tt
+   integer, dimension(:), allocatable :: iseed
+   real(double) :: alpha = 1, beta = 0, time, flops
+   real(double), managed, dimension(:,:), allocatable :: A, B, C
+   real(double), dimension(:,:), allocatable :: C_
+   character(len=32) :: arg
+   type(curandGenerator) :: g
+   
+   ! initialise PRNG
+   call random_seed(SIZE=isize)
+   allocate(iseed(isize))
+   iseed = 1
+   call random_seed(PUT=iseed)
+
+   if( command_argument_count() > 0) then
+       call get_command_argument(1, arg)
+       read(arg,*) width
+   end if
+
+   ! Allocate memory for A, B, and C
+   allocate(A(width, width), stat=istat)
+   if (istat /= 0) then
+      write(*,*) "!!!! Device memory allocation error (allocate A)"
+      stop 1
+   end if
+   allocate(B(width, width), stat=istat)
+   if (istat /= 0) then
+      write(*,*) "!!!! Device memory allocation error (allocate B)"
+      stop 1
+   end if
+   allocate(C(width, width), stat=istat)
+   if (istat /= 0) then
+      write(*,*) "!!!! Device memory allocation error (allocate C)"
+      stop 1
+   end if
+   allocate(C_(width, width), stat=istat)
+   if (istat /= 0) then
+      write(*,*) "!!!! Host memory allocation error (allocate C_)"
+      stop 1
+   end if
+
+   ! Generate width * width random numbers between 0 and 1 to fill matrixces A and B
+
+         ! get uniform sample using cuRAND
+      
+        istat = curandCreateGenerator(g,CURAND_RNG_PSEUDO_DEFAULT)
+        istat = curandGenerateUniformDouble(g, A,size(A))
+        istat = curandGenerateUniformDouble(g, B,size(B))
+        istat = curandDestroyGenerator(g)
+
+   C = 0
+   C_ = 0
+   
+   ! Now prepare the call to CUBLAS
+   istat = cublasInit()
+   if (istat /= CUBLAS_STATUS_SUCCESS) then
+      write(*,*) "!!!! CUBLAS initialization error"
+      stop 1
+   end if
+
+   ! Perform calculation
+   call system_clock(t1)
+   call cublasDgemm('n', 'n', size(A,1), size(B,2), size(A,2), alpha, A, size(A,1), B, size(B,1), beta, C , size(C,1))
+   istat = cudaDeviceSynchronize()
+   if (istat /= CUBLAS_STATUS_SUCCESS) then
+      write(*,*) "!!!! Kernel execution error (during sync)"
+      stop 1
+   end if
+   call system_clock(t2, tt)
+   time=dble(t2-t1)/tt
+   10 FORMAT(a,f12.5,a)
+   write(*,10) "Call to cublasDGEMM took ",time," seconds"
+   20 FORMAT(a,f12.2,a)
+   flops  = 2.0e-9 *(dble(width)**3)/ time
+   write(*,20) "This corresponds to       ",flops," GFLOPS"
+   ! Perform calculation with intrinsic
+   call system_clock(t1)
+   ! uncomment for debug
+   ! C_ = alpha * matmul(A, B) + beta * C_
+   ! ! Hint: the Fortran compiler may replace that with a call to the BLAS routine (depending on width)
+   ! !       or you could use the host BLAS routine directly
+   ! call system_clock(t2, tt)
+   ! write(*,10) "Call to intrinsic took ",real(t2-t1)/tt," seconds"
+
+   ! write(*,10) "Max error is ", maxval(C - C_)
+
+   deallocate(A, B, C, C_)
+    
+
+end program dgemm_um

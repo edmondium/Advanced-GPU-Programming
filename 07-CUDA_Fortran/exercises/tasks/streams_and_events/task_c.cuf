@@ -1,0 +1,55 @@
+program main
+
+    use cudafor
+    implicit none
+
+    integer, parameter             :: N = 2**22, oneGigaByte = 2**30
+    integer                        :: blockDim, gridDim, istat
+    real                           :: runtime = 0.0D0, bw
+    real(8)                        :: oneSecondInMs = 1000.0
+    !TODO use pinned memory for host arrays
+    real, allocatable      :: inputBufferH(:), outputBufferH(:)
+    real,allocatable,device        :: inputBufferD(:), outputBufferD(:)
+    ! declair upload and download streams
+
+    type (cudaEvent) :: startEvent, endEvent
+
+    istat = cudaSetDevice(0)
+    if (istat .ne. 0) print *,"cudaSetDevice returned ",istat
+
+    !TODO: Allocate host and device arrays
+
+  istat = cudaEventCreate( startEvent )
+  if (istat .ne. 0) print *,"cudaEventCreate returned ",istat
+  istat = cudaEventCreate( endEvent )
+  if (istat .ne. 0) print *,"cudaEventCreate returned ",istat
+
+
+    ! TODO : Create uploadStream and downloadStream CUDA streams ...
+
+ ! start timing
+  
+    istat = cudaEventRecord ( startEvent, 0)
+    if (istat .ne. 0) print *,"cudaEventRecord returned ",istat
+
+ ! copy input buffer to device and output buffer to host
+    !TODO: Start memcpys asynchronously in seperate streams to overlap the host to device with the device to host transfer
+    inputBufferD = inputBufferH
+    outputBufferH = outputBufferD
+
+    
+    !TODO synchronize default stream this will also wait for work in uploadStream and downloadStream */
+    istat = cudaEventRecord ( endEvent, 0)
+    if (istat .ne. 0) print *,"cudaEventRecord returned ",istat
+    istat = cudaEventSynchronize ( endEvent )
+    if (istat .ne. 0) print *,"cudaEventSynchronize returned ",istat
+    istat = cudaEventElapsedTime ( runtime, startEvent, endEvent )
+    if (istat .ne. 0) print *,"cudaEventElapsedTime returned ",istat
+
+    !TODO: Free host and device memory
+    bw = N*(storage_size(1.0)/8)*oneSecondInMs / ( oneGigaByte * runtime )
+    print *,"Bidirectional Bandwidth ", bw, "(GB/s)" 
+    print *, "Elapsed time for data transfers (Ms) = ", runtime
+
+    !TODO Destroy the user created streams  ...
+end program main

@@ -1,0 +1,56 @@
+program int
+use cudafor
+! TODO: use the cuRAND module
+
+
+implicit none
+      real*8,allocatable,device :: x_d(:),f_d(:) ! device variables
+      real*8             :: I, a, b, s, pi=3.14159265359
+      integer*8          :: sampleSize,m
+      integer               :: istat
+      ! TODO: declare a variable with generator type
+
+      sampleSize = 100000000
+      a=0
+      b=pi
+
+      allocate (x_d(sampleSize),f_d(sampleSize)) ! device variable allocation 
+      
+      ! get uniform sample using cuRAND
+      
+      ! TODO: Create a new generator
+      ! TODO:  set a seed (optional)
+      ! TODO: Generate uniform random numbers
+      ! TODO: Destroy the generator
+
+       ! map the sample from interval (0,1) to (a,b)       
+       !$cuf kernel do <<<* ,* >>>
+        do m=1,size(x_d)
+          x_d(m) = (b-a)*x_d(m) + a
+        end do
+
+      ! calculats the function values using the scaled sample
+        !$cuf kernel do <<< *, *>>>
+        do m=1,sampleSize
+          f_d(m)=sin(x_d(m))
+        end do
+      ! reduction
+       s=0
+       !$cuf kernel do <<<* , *>>>
+       do m=1,sampleSize
+         s= s+f_d(m)
+       end do
+       
+       ! final results
+
+       I = ((b-a)/dble(sampleSize)) * s
+
+
+      10 format(a23,i10)
+      11 format(a23,f10.6)
+      write(*,10) "       Sample Size = ", sampleSize
+      write(*,11) " Estimated value I = ", I
+      write(*,11) "              diff = ", abs (I - 2)
+
+      deallocate(x_d,f_d)
+end program int
